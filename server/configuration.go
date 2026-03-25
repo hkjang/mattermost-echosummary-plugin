@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -17,7 +18,21 @@ import (
 //
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
-type configuration struct{}
+type configuration struct {
+	VLLMBaseURL             string
+	VLLMAPIKey              string
+	VLLMModel               string
+	DefaultPrompt           string
+	NotificationTimezone    string
+	DefaultTimeSlots        string
+	TargetUsernames         string
+	IncludeMentionedThreads bool
+	MaxContextCharacters    int
+	MaxThreadsPerUser       int
+	ContextMessagesBefore   int
+	ContextMessagesAfter    int
+	RequestTimeoutSeconds   int
+}
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
 // your configuration has reference types.
@@ -79,4 +94,51 @@ func (p *Plugin) OnConfigurationChange() error {
 	p.setConfiguration(configuration)
 
 	return nil
+}
+
+func (c *configuration) normalized() *configuration {
+	if c == nil {
+		c = &configuration{}
+	}
+
+	clone := c.Clone()
+	clone.VLLMBaseURL = strings.TrimSpace(clone.VLLMBaseURL)
+	clone.VLLMAPIKey = strings.TrimSpace(clone.VLLMAPIKey)
+	clone.VLLMModel = strings.TrimSpace(clone.VLLMModel)
+	clone.DefaultPrompt = strings.TrimSpace(clone.DefaultPrompt)
+	clone.NotificationTimezone = strings.TrimSpace(clone.NotificationTimezone)
+	clone.DefaultTimeSlots = strings.TrimSpace(clone.DefaultTimeSlots)
+	clone.TargetUsernames = strings.TrimSpace(clone.TargetUsernames)
+
+	if clone.DefaultPrompt == "" {
+		clone.DefaultPrompt = defaultSummaryPrompt
+	}
+	if clone.NotificationTimezone == "" {
+		clone.NotificationTimezone = defaultNotificationTimezone
+	}
+	if clone.DefaultTimeSlots == "" {
+		clone.DefaultTimeSlots = defaultUserTimeSlots
+	}
+	if clone.MaxContextCharacters <= 0 {
+		clone.MaxContextCharacters = defaultMaxContextCharacters
+	}
+	if clone.MaxThreadsPerUser <= 0 {
+		clone.MaxThreadsPerUser = defaultMaxThreadsPerUser
+	}
+	if clone.ContextMessagesBefore <= 0 {
+		clone.ContextMessagesBefore = defaultContextMessagesBefore
+	}
+	if clone.ContextMessagesAfter <= 0 {
+		clone.ContextMessagesAfter = defaultContextMessagesAfter
+	}
+	if clone.RequestTimeoutSeconds <= 0 {
+		clone.RequestTimeoutSeconds = defaultRequestTimeoutSeconds
+	}
+
+	return clone
+}
+
+func (c *configuration) isConfigured() bool {
+	normalized := c.normalized()
+	return normalized.VLLMBaseURL != "" && normalized.VLLMModel != ""
 }

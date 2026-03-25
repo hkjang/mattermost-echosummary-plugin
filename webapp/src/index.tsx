@@ -8,10 +8,19 @@ import type {GlobalState} from '@mattermost/types/store';
 
 import type {PluginRegistry} from 'types/mattermost-webapp';
 
+import {DeliverySettingsSection} from './user_settings';
+
 export default class Plugin {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     public async initialize(registry: PluginRegistry, store: Store<GlobalState>) {
-        // @see https://developers.mattermost.com/extend/plugins/webapp/reference/
+        registry.registerUserSettings({
+            id: manifest.id,
+            uiName: manifest.name,
+            sections: [{
+                title: 'Echo Summary',
+                component: DeliverySettingsSection,
+            }],
+        });
     }
 }
 

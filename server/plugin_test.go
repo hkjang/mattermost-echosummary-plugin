@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,8 +13,9 @@ func TestServeHTTP(t *testing.T) {
 	assert := assert.New(t)
 	plugin := Plugin{}
 	plugin.router = plugin.initRouter()
+	plugin.setConfiguration((&configuration{}).normalized())
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/api/v1/hello", nil)
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
 	r.Header.Set("Mattermost-User-ID", "test-user-id")
 
 	plugin.ServeHTTP(nil, w, r)
@@ -22,9 +23,9 @@ func TestServeHTTP(t *testing.T) {
 	result := w.Result()
 	assert.NotNil(result)
 	defer func() { _ = result.Body.Close() }()
-	bodyBytes, err := io.ReadAll(result.Body)
+	var body map[string]any
+	err := json.NewDecoder(result.Body).Decode(&body)
 	assert.Nil(err)
-	bodyString := string(bodyBytes)
-
-	assert.Equal("Hello, world!", bodyString)
+	assert.Equal("ok", body["status"])
+	assert.Equal(pluginID, body["plugin_id"])
 }

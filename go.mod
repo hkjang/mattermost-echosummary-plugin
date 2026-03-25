@@ -1,4 +1,4 @@
-module github.com/mattermost/mattermost-plugin-starter-template
+module github.com/hkjang/mattermost-echosummary-plugin
 
 go 1.25
 

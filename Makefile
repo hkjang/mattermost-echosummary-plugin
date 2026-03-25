@@ -266,9 +266,9 @@ ifneq ($(HAS_WEBAPP),)
 	cp -r webapp/dist dist/$(PLUGIN_ID)/webapp/
 endif
 ifeq ($(shell uname),Darwin)
-	cd dist && tar --disable-copyfile -cvzf $(BUNDLE_NAME) $(PLUGIN_ID)
+	$(GO) run ./build/package -manifest plugin.json -source dist/$(PLUGIN_ID) -output dist/$(BUNDLE_NAME)
 else
-	cd dist && tar -cvzf $(BUNDLE_NAME) $(PLUGIN_ID)
+	$(GO) run ./build/package -manifest plugin.json -source dist/$(PLUGIN_ID) -output dist/$(BUNDLE_NAME)
 endif
 
 	@echo plugin built at: dist/$(BUNDLE_NAME)
@@ -436,5 +436,5 @@ help:
 mock:
 ifneq ($(HAS_SERVER),)
 	go install go.uber.org/mock/mockgen@v0.6.0
-	mockgen -destination=server/command/mocks/mock_commands.go -package=mocks github.com/mattermost/mattermost-plugin-starter-template/server/command Command
+	mockgen -destination=server/command/mocks/mock_commands.go -package=mocks github.com/hkjang/mattermost-echosummary-plugin/server/command Command
 endif
