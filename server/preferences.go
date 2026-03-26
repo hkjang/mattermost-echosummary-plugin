@@ -161,27 +161,39 @@ func (p *Plugin) saveUserDeliveryPreference(userID, raw string) error {
 		return errors.New("at least one HH:mm time slot is required")
 	}
 
-	return p.API.UpdatePreferencesForUser(userID, []model.Preference{{
+	if appErr := p.API.UpdatePreferencesForUser(userID, []model.Preference{{
 		UserId:   userID,
 		Category: userPreferenceCategory,
 		Name:     userPreferenceDeliveryTimes,
 		Value:    value,
-	}})
+	}}); appErr != nil {
+		return errors.Wrap(appErr, "failed to update user delivery preference")
+	}
+
+	return nil
 }
 
 func (p *Plugin) disableUserDeliveryPreference(userID string) error {
-	return p.API.UpdatePreferencesForUser(userID, []model.Preference{{
+	if appErr := p.API.UpdatePreferencesForUser(userID, []model.Preference{{
 		UserId:   userID,
 		Category: userPreferenceCategory,
 		Name:     userPreferenceDeliveryTimes,
 		Value:    userPreferenceDisabledValue,
-	}})
+	}}); appErr != nil {
+		return errors.Wrap(appErr, "failed to disable user delivery preference")
+	}
+
+	return nil
 }
 
 func (p *Plugin) clearUserDeliveryPreference(userID string) error {
-	return p.API.DeletePreferencesForUser(userID, []model.Preference{{
+	if appErr := p.API.DeletePreferencesForUser(userID, []model.Preference{{
 		UserId:   userID,
 		Category: userPreferenceCategory,
 		Name:     userPreferenceDeliveryTimes,
-	}})
+	}}); appErr != nil {
+		return errors.Wrap(appErr, "failed to clear user delivery preference")
+	}
+
+	return nil
 }
