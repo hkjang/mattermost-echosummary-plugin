@@ -53,14 +53,8 @@ func (p *Plugin) handleCommand(args *model.CommandArgs) (*model.CommandResponse,
 			return p.ephemeralCommandResponse("관리자 설정이 아직 완료되지 않았습니다. 시스템 콘솔에서 vLLM URL과 모델명을 먼저 설정해 주세요."), nil
 		}
 
-		user, err := p.client.User.Get(args.UserId)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to load current user")
-		}
-		if err := p.sendSummaryToUser(user, time.Now(), cfg); err != nil {
-			return nil, errors.Wrap(err, "failed to send manual summary")
-		}
-		return p.ephemeralCommandResponse("어제 참여한 대화 요약을 DM으로 보냈습니다."), nil
+		p.runManualSummary(args.UserId, args.ChannelId, time.Now(), cfg)
+		return p.ephemeralCommandResponse("요약 요청을 접수했습니다. DM에서 진행 상태와 결과를 알려드릴게요."), nil
 
 	case "status":
 		settings, err := p.getUserDeliverySettings(args.UserId, cfg)

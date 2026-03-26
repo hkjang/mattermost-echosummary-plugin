@@ -33,6 +33,8 @@ type lookupCaches struct {
 	users    map[string]*model.User
 }
 
+type summaryProgressFunc func(string)
+
 func (p *Plugin) ensureBot() error {
 	botUserID, err := p.client.Bot.EnsureBot(&model.Bot{
 		Username:    botUsername,
@@ -107,27 +109,43 @@ func parseCommaSeparated(raw string) []string {
 }
 
 func (p *Plugin) sendSummaryToUser(user *model.User, referenceTime time.Time, cfg *configuration) error {
+	return p.sendSummaryToUserWithProgress(user, referenceTime, cfg, nil)
+}
+
+func (p *Plugin) sendSummaryToUserWithProgress(user *model.User, referenceTime time.Time, cfg *configuration, progress summaryProgressFunc) error {
 	if p.botUserID == "" {
 		if err := p.ensureBot(); err != nil {
 			return errors.Wrap(err, "failed to ensure bot")
 		}
 	}
 
-	message, err := p.generateSummaryMessage(user, referenceTime, cfg)
+	message, err := p.generateSummaryMessageWithProgress(user, referenceTime, cfg, progress)
 	if err != nil {
 		return err
+	}
+
+	if progress != nil {
+		progress("최종 요약 DM을 전송하고 있습니다...")
 	}
 
 	return p.client.Post.DM(p.botUserID, user.Id, &model.Post{Message: message})
 }
 
 func (p *Plugin) generateSummaryMessage(user *model.User, referenceTime time.Time, cfg *configuration) (string, error) {
+	return p.generateSummaryMessageWithProgress(user, referenceTime, cfg, nil)
+}
+
+func (p *Plugin) generateSummaryMessageWithProgress(user *model.User, referenceTime time.Time, cfg *configuration, progress summaryProgressFunc) (string, error) {
 	location, err := loadScheduleLocation(cfg.NotificationTimezone)
 	if err != nil {
 		return "", err
 	}
 
 	summaryDate := referenceTime.In(location).AddDate(0, 0, -1)
+	if progress != nil {
+		progress("어제 참여한 대화를 수집하고 있습니다...")
+	}
+
 	contexts, channelCount, truncated, err := p.collectConversationContexts(user, summaryDate, cfg)
 	if err != nil {
 		return "", err
@@ -144,6 +162,9 @@ func (p *Plugin) generateSummaryMessage(user *model.User, referenceTime time.Tim
 	}
 
 	if len(contexts) == 0 {
+		if progress != nil {
+			progress("어제 참여한 대화를 찾지 못했습니다. 결과 안내를 DM으로 전송합니다...")
+		}
 		return strings.Join(append(header,
 			"",
 			"어제 참여한 대화를 찾지 못해 요약을 건너뛰었습니다.",
@@ -153,8 +174,20 @@ func (p *Plugin) generateSummaryMessage(user *model.User, referenceTime time.Tim
 	}
 
 	chunks := chunkContexts(contexts, cfg.MaxContextCharacters)
+	if progress != nil {
+		if len(chunks) == 1 {
+			progress(fmt.Sprintf("%d개의 대화 문맥을 요약 모델에 요청하고 있습니다...", len(contexts)))
+		} else {
+			progress(fmt.Sprintf("%d개의 대화 문맥을 %d개의 요청으로 나눠 순차 요약하고 있습니다...", len(contexts), len(chunks)))
+		}
+	}
+
 	partials := make([]string, 0, len(chunks))
-	for _, chunk := range chunks {
+	for index, chunk := range chunks {
+		if progress != nil && len(chunks) > 1 {
+			progress(fmt.Sprintf("부분 요약 %d/%d 진행 중입니다...", index+1, len(chunks)))
+		}
+
 		summary, err := p.createChatCompletion(cfg, []chatMessage{
 			{Role: "system", Content: cfg.DefaultPrompt},
 			{Role: "user", Content: buildSummaryUserPrompt(user, summaryDate, location, chunk)},
@@ -167,6 +200,10 @@ func (p *Plugin) generateSummaryMessage(user *model.User, referenceTime time.Tim
 
 	finalSummary := partials[0]
 	if len(partials) > 1 {
+		if progress != nil {
+			progress("부분 요약을 합쳐 최종 결과를 정리하고 있습니다...")
+		}
+
 		finalSummary, err = p.createChatCompletion(cfg, []chatMessage{
 			{Role: "system", Content: finalMergePrompt},
 			{Role: "user", Content: buildMergePrompt(user, summaryDate, partials)},
@@ -174,6 +211,10 @@ func (p *Plugin) generateSummaryMessage(user *model.User, referenceTime time.Tim
 		if err != nil {
 			return "", err
 		}
+	}
+
+	if progress != nil {
+		progress("최종 요약 메시지를 정리하고 있습니다...")
 	}
 
 	messageLines := append(header, "", strings.TrimSpace(finalSummary), "", fmt.Sprintf("_생성 시각: %s_", referenceTime.In(location).Format("2006-01-02 15:04 MST")))

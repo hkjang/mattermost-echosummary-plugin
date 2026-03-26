@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -79,7 +80,8 @@ func (p *Plugin) OnDeactivate() error {
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	response, err := p.handleCommand(args)
 	if err != nil {
-		return nil, model.NewAppError("ExecuteCommand", "plugin.command.execute_command.app_error", nil, err.Error(), 500)
+		p.API.LogError("Echo Summary command failed", "user_id", args.UserId, "command", args.Command, "err", err)
+		return p.ephemeralCommandResponse(fmt.Sprintf("요청을 처리하지 못했습니다: %s", err.Error())), nil
 	}
 	return response, nil
 }
