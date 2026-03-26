@@ -5,7 +5,7 @@
     "homepage_url": "https://github.com/hkjang/mattermost-echosummary-plugin",
     "support_url": "https://github.com/hkjang/mattermost-echosummary-plugin/issues",
     "icon_path": "assets/starter-template-icon.svg",
-    "version": "0.6.2",
+    "version": "0.6.3",
     "min_server_version": "6.2.1",
     "server": {
         "executables": {
@@ -20,116 +20,116 @@
         "bundle_path": "webapp/dist/main.js"
     },
     "settings_schema": {
-        "header": "Echo Summary는 전날 사용자가 참여한 대화를 수집해 지정한 vLLM OpenAI 호환 Chat Completions API로 요약하고, 사용자별 시간 슬롯에 맞춰 DM으로 전달합니다.",
+        "header": "Echo Summary collects each user's previous-day Mattermost conversations, summarizes them through a configurable vLLM OpenAI-compatible Chat Completions API, and delivers the report by DM on scheduled times.",
         "sections": [
             {
                 "key": "vllm",
-                "title": "vLLM 요약 설정",
+                "title": "vLLM summary settings",
                 "settings": [
                     {
                         "key": "VLLMBaseURL",
                         "display_name": "vLLM Base URL",
                         "type": "text",
                         "placeholder": "https://vllm.example.com/v1",
-                        "help_text": "루트 URL 또는 /v1 경로까지 넣으면 됩니다. 플러그인이 /chat/completions 경로를 자동으로 맞춰 호출합니다."
+                        "help_text": "Use the root URL or include /v1. The plugin appends /chat/completions automatically."
                     },
                     {
                         "key": "VLLMAPIKey",
-                        "display_name": "vLLM API Key",
+                        "display_name": "vLLM API key",
                         "type": "text",
                         "placeholder": "sk-...",
-                        "help_text": "필요한 경우 Authorization Bearer 토큰으로 전달됩니다.",
+                        "help_text": "When provided, the value is sent as an Authorization Bearer token.",
                         "secret": true
                     },
                     {
                         "key": "VLLMModel",
-                        "display_name": "요약 모델명",
+                        "display_name": "Summary model name",
                         "type": "text",
                         "placeholder": "qwen2.5-14b-instruct",
-                        "help_text": "Chat Completions 요청의 model 값으로 그대로 전달됩니다."
+                        "help_text": "Sent as the model field in the Chat Completions request."
                     },
                     {
                         "key": "DefaultPrompt",
-                        "display_name": "기본 요약 프롬프트",
+                        "display_name": "Default summary prompt",
                         "type": "longtext",
-                        "help_text": "system 프롬프트로 사용됩니다. 비워두면 Echo Summary 기본 프롬프트가 적용됩니다."
+                        "help_text": "Used as the system prompt. Leave blank to use Echo Summary's built-in default prompt."
                     },
                     {
                         "key": "RequestTimeoutSeconds",
-                        "display_name": "요약 요청 타임아웃(초)",
+                        "display_name": "Request timeout (seconds)",
                         "type": "number",
                         "default": 60,
-                        "help_text": "vLLM 응답을 기다리는 최대 시간입니다."
+                        "help_text": "Maximum time to wait for a vLLM response."
                     }
                 ]
             },
             {
                 "key": "scope",
-                "title": "대상 사용자와 스케줄",
+                "title": "Target users and schedule",
                 "settings": [
                     {
                         "key": "NotificationTimezone",
-                        "display_name": "기본 타임존",
+                        "display_name": "Default timezone",
                         "type": "text",
                         "default": "Asia/Seoul",
                         "placeholder": "Asia/Seoul",
-                        "help_text": "전날 기준일과 사용자 발송 시간 계산에 사용됩니다."
+                        "help_text": "Used when calculating the previous-day window and each user's delivery schedule."
                     },
                     {
                         "key": "DefaultTimeSlots",
-                        "display_name": "기본 발송 시간",
+                        "display_name": "Default delivery times",
                         "type": "text",
                         "default": "09:00",
                         "placeholder": "09:00,13:30",
-                        "help_text": "사용자 개인 설정이 없을 때 적용되는 기본 시간 슬롯입니다. 쉼표로 여러 시간을 넣을 수 있습니다."
+                        "help_text": "Fallback times used when a user has not set a personal override. You can enter multiple times separated by commas."
                     },
                     {
                         "key": "TargetUsernames",
-                        "display_name": "대상 사용자 범위",
+                        "display_name": "Target usernames",
                         "type": "text",
                         "placeholder": "alice,bob",
-                        "help_text": "비워두면 모든 활성 사용자에게 적용합니다. 값을 넣으면 지정한 username만 대상으로 삼습니다."
+                        "help_text": "Leave blank to include all active users. If set, only the listed usernames are summarized."
                     },
                     {
                         "key": "IncludeMentionedThreads",
-                        "display_name": "멘션된 thread 포함",
+                        "display_name": "Include mentioned threads",
                         "type": "bool",
                         "default": false,
-                        "help_text": "사용자가 직접 작성하지 않았더라도 전날 멘션된 thread를 요약 후보에 포함합니다."
+                        "help_text": "Also include threads where the user was mentioned yesterday, even if they did not post in them."
                     }
                 ]
             },
             {
                 "key": "collection",
-                "title": "수집 범위",
+                "title": "Collection scope",
                 "settings": [
                     {
                         "key": "MaxThreadsPerUser",
-                        "display_name": "사용자당 최대 스레드 수",
+                        "display_name": "Max threads per user",
                         "type": "number",
                         "default": 40,
-                        "help_text": "너무 많은 참여 대화가 있을 때 최신순으로 이 개수까지만 요약합니다."
+                        "help_text": "When a user joined many conversations, only the most recent threads up to this limit are summarized."
                     },
                     {
                         "key": "MaxContextCharacters",
-                        "display_name": "요청당 최대 문맥 길이",
+                        "display_name": "Max characters per request",
                         "type": "number",
                         "default": 12000,
-                        "help_text": "수집된 문맥을 여러 Chat Completions 요청으로 나눌 때 사용하는 문자 수 기준입니다."
+                        "help_text": "Character budget used when batching collected context into Chat Completions requests."
                     },
                     {
                         "key": "ContextMessagesBefore",
-                        "display_name": "anchor 이전 문맥 수",
+                        "display_name": "Messages before anchor",
                         "type": "number",
                         "default": 3,
-                        "help_text": "사용자 참여 메시지 앞쪽에서 함께 포함할 최대 메시지 수입니다."
+                        "help_text": "Maximum number of surrounding messages to include before each user-authored anchor post."
                     },
                     {
                         "key": "ContextMessagesAfter",
-                        "display_name": "anchor 이후 문맥 수",
+                        "display_name": "Messages after anchor",
                         "type": "number",
                         "default": 6,
-                        "help_text": "사용자 참여 메시지 뒤쪽에서 함께 포함할 최대 메시지 수입니다."
+                        "help_text": "Maximum number of surrounding messages to include after each user-authored anchor post."
                     }
                 ]
             }

@@ -6,8 +6,11 @@ import type {PreferenceType} from '@mattermost/types/preferences';
 import type {GlobalState} from '@mattermost/types/store';
 
 import {deletePreferences, savePreferences} from 'mattermost-redux/actions/preferences';
+import {getCurrentUser} from 'mattermost-redux/selectors/entities/common';
 import {get as getPreference} from 'mattermost-redux/selectors/entities/preferences';
 import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
+
+import {formatInvalidTimeFormat, formatInvalidTimeValue, getEchoSummaryText} from './i18n';
 
 const preferenceCategory = `pp_${manifest.id}`;
 const deliveryTimesName = 'delivery_times';
@@ -65,23 +68,6 @@ const inputStyle: React.CSSProperties = {
     width: '100%',
 };
 
-const text = {
-    clearToDefault: '관리자 기본값으로 되돌리기',
-    description: '전날 참여한 대화를 요약해서 지정한 시간에 DM으로 받습니다. 관리자 기본 설정이 있더라도 여기서 개인 시간을 따로 저장하거나, 개인 알림을 끌 수 있습니다.',
-    enableDelivery: '개인 발송 활성화',
-    exampleLabel: '쉼표나 공백으로 여러 시간을 입력할 수 있습니다. 예:',
-    exampleValue: '09:00, 13:30',
-    heading: '전날 대화 요약 DM',
-    resetError: '개인 설정을 지우지 못했습니다.',
-    resetSuccess: '개인 설정을 지우고 관리자 기본값으로 되돌렸습니다.',
-    saveError: '설정을 저장하지 못했습니다.',
-    saveIdle: '저장',
-    saveSaving: '저장 중...',
-    saveSuccessDisabled: '개인 발송을 비활성화했습니다.',
-    saveSuccessEnabled: '개인 발송 시간이 저장되었습니다.',
-    validateEmpty: '최소 1개 이상의 HH:mm 시간을 입력해 주세요.',
-};
-
 function normalizeTimes(raw: string): string {
     const tokens = raw.split(/[\s,;]+/).map((value) => value.trim()).filter(Boolean);
     const unique = Array.from(new Set(tokens));
@@ -89,19 +75,20 @@ function normalizeTimes(raw: string): string {
     return unique.join(',');
 }
 
-function validateTimes(raw: string): string | null {
+function validateTimes(raw: string, locale: string | undefined, emptyMessage: string): string | null {
     const tokens = raw.split(/[\s,;]+/).map((value) => value.trim()).filter(Boolean);
     if (tokens.length === 0) {
-        return text.validateEmpty;
+        return emptyMessage;
     }
 
     for (const token of tokens) {
         if (!(/^\d{2}:\d{2}$/).test(token)) {
-            return `잘못된 시간 형식입니다: ${token}`;
+            return formatInvalidTimeFormat(locale, token);
         }
+
         const [hour, minute] = token.split(':').map(Number);
         if (hour > 23 || minute > 59) {
-            return `잘못된 시간 값입니다: ${token}`;
+            return formatInvalidTimeValue(locale, token);
         }
     }
 
@@ -111,7 +98,9 @@ function validateTimes(raw: string): string | null {
 export const DeliverySettingsSection = () => {
     const dispatch = useDispatch<any>();
     const currentUserId = useSelector(getCurrentUserId);
+    const currentLocale = useSelector((state: GlobalState) => getCurrentUser(state)?.locale || 'en');
     const storedValue = useSelector((state: GlobalState) => getPreference(state, preferenceCategory, deliveryTimesName, ''));
+    const text = getEchoSummaryText(currentLocale).userSettings;
 
     const [enabled, setEnabled] = useState(storedValue !== disabledValue);
     const [draft, setDraft] = useState(storedValue && storedValue !== disabledValue ? storedValue : defaultDraft);
@@ -140,12 +129,13 @@ export const DeliverySettingsSection = () => {
 
         let value = disabledValue;
         if (enabled) {
-            const validationMessage = validateTimes(draft);
+            const validationMessage = validateTimes(draft, currentLocale, text.validateEmpty);
             if (validationMessage) {
                 setSaveState('error');
                 setMessage(validationMessage);
                 return;
             }
+
             value = normalizeTimes(draft);
         }
 
@@ -210,7 +200,7 @@ export const DeliverySettingsSection = () => {
                 <input
                     disabled={!enabled}
                     onChange={(event) => setDraft(event.target.value)}
-                    placeholder='09:00,13:30'
+                    placeholder={text.inputPlaceholder}
                     style={inputStyle}
                     value={draft}
                 />
