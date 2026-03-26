@@ -2,6 +2,12 @@
 
 Mattermost Echo Summary is a server + webapp plugin that finds the conversations each user participated in yesterday, expands thread and nearby context, sends that context to a vLLM OpenAI-compatible Chat Completions API, and delivers the resulting summary by DM on scheduled time slots.
 
+Documentation:
+- [Korean README](./README.ko.md)
+- [Detailed configuration guide](./docs/configuration.ko.md)
+- [Architecture guide](./docs/architecture.ko.md)
+- [Operations and troubleshooting guide](./docs/operations.ko.md)
+
 ## What it does
 
 - Collects the previous day's conversations from the user's authored posts
@@ -44,6 +50,18 @@ The same controls are also available from slash commands:
 - `/echosummary disable`
 - `/echosummary clear-times`
 
+Notes:
+- `/echosummary now` acknowledges immediately, then performs the summary in the background.
+- While a manual summary is running, the bot updates a DM progress message so the user can see collection and multi-step vLLM progress.
+- Personal delivery times are stored per Mattermost user preference, so each user can keep a different schedule.
+
+## Documentation
+
+- [README.ko.md](./README.ko.md): Korean overview and quick start
+- [docs/configuration.ko.md](./docs/configuration.ko.md): admin settings, personal schedule behavior, slash command examples
+- [docs/architecture.ko.md](./docs/architecture.ko.md): collection rules, scheduling model, summarization pipeline, data model
+- [docs/operations.ko.md](./docs/operations.ko.md): install, deploy, verify, build, package, release, troubleshooting
+
 ## Build
 
 ```bash
@@ -53,8 +71,10 @@ make
 That generates the manifest files, builds the server and webapp, and creates the plugin package:
 
 ```text
-dist/com.mattermost.echosummary.tar.gz
+dist/com.mattermost.echosummary-<version>.tar.gz
 ```
+
+For Windows-specific manual build and packaging steps, see [docs/operations.ko.md](./docs/operations.ko.md).
 
 ## Development
 
